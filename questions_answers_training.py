@@ -1,24 +1,14 @@
 import copy
 import itertools
-import json
-import json as json_api
 import random
 import re
-import socket
 from collections import OrderedDict
-from datetime import datetime
-from time import sleep
 from typing import Callable, Iterable, Optional, TypeVar
 
 import pandas as pd
+from colorama import Back, Fore, init, Style
 from openpyxl.reader.excel import load_workbook
 from pandas import DataFrame
-
-import requests
-from colorama import Back, Fore, init, Style
-from requests.exceptions import ChunkedEncodingError, SSLError
-from requests_html import HTMLSession
-from urllib3.exceptions import MaxRetryError, NewConnectionError
 
 # colors = ["WHITE", "BLACK", "RED", "GREEN", "YELLOW", "BLUE", "MAGENTA", "CYAN"]
 colors = ["WHITE", "RED", "GREEN", "YELLOW", "BLUE", "MAGENTA", "CYAN"]
@@ -188,6 +178,16 @@ class QuestionsAnswers:
         self.questions_answers = copy.deepcopy(self.questions_answers_origin)
 
 
+
+###### script file start LIB #####
+
+
+T = TypeVar("T")
+E = TypeVar("E")
+json_base = list[dict[T, E]]
+json_T = dict[T, E]
+
+
 def is_correct_lines(lines: list[str], debug=True) -> bool:
     questions_answers_pattern = r"[^\t\n\r]+\t[^\t\n\r]+[\n\r]"
     incorrect_lines = [(i + 1, lines[i]) for i in range(len(lines)) if re.fullmatch(questions_answers_pattern, lines[i]) is None]
@@ -217,16 +217,6 @@ def closest_space_index(text: str) -> int:
         left_move += 1
         right_move += 1
 
-
-###### script file start LIB #####
-
-
-T = TypeVar("T")
-E = TypeVar("E")
-json_base = list[dict[T, E]]
-json_T = dict[T, E]
-
-
 def get_lines(file_name: str, encoding="utf-8") -> Optional[list[str]]:
     try:
         with open(file_name, 'r', encoding=encoding) as file:
@@ -245,70 +235,6 @@ def printc(text: str, color="green", background_color=None, attributes: Iterable
     print("{}{}{}".format(style, text, Style.RESET_ALL), end=end)
 
 
-def is_iter_but_not_str(element):
-    """ If iterable object and not str"""
-    if isinstance(element, Iterable) and not isinstance(element, str):
-        return True
-    return False
-
-
-def url_to_json(url: str, timelimit=1) -> Optional[json_T]:
-    html_session = HTMLSession()
-    try:
-        start = datetime.now()
-        json_value = None
-        while True:
-            try:
-                if (datetime.now() - start).total_seconds() / 60 >= timelimit:
-                    return None
-                html_result_text = html_session.get(url)
-                html_result_text = html_result_text.text
-                if "503 Service Unavailable" in html_result_text or "<Response [403]>" in html_result_text:
-                    print("url_to_json error: err Response in html_result_text")
-                    sleep(5)
-                    continue
-                json_value = json_api.loads(html_result_text)
-                break
-            except (ChunkedEncodingError, ConnectionError, NewConnectionError, socket.gaierror, json.decoder.JSONDecodeError,
-                    requests.exceptions.ConnectTimeout):
-                printc("url_to_json ChunkedEncodingError", background_color="red")
-                sleep(2)
-                return url_to_json(url)
-        return json_value
-    except MaxRetryError or SSLError:
-        return None
-
-
-def json_base_to_json_ok(dictionaries: json_base | dict,
-                         keys_aim: list[T],
-                         keys_path_to_start: list[T] = None,
-                         condition: Callable[[json_T], bool] = None,
-                         doublons=True) -> json_T:
-    """
-    On remplace les indices de la liste de base en la transformant en un dictionnaire où
-    les clefs seront les valeurs associées à la clef donnée en paramètre des dictionnaires de la liste.
-    S'il y a plusieurs keys, tous les champs doivent avoir le même pattern
-    """
-    result = {}
-    if keys_path_to_start is not None:
-        for key in keys_path_to_start:
-            dictionaries = dictionaries[key]
-    if type(dictionaries) is dict:
-        dictionaries = [dictionaries]
-    for dictionary in dictionaries:
-        key_cursor = dictionary
-        for k in keys_aim[:-1]:
-            key_cursor = key_cursor[k]
-        key = key_cursor[keys_aim[-1]]
-        if condition is not None and not condition(dictionary):
-            continue
-        if doublons and key in result:
-            if type(result[key]) is not list:
-                result[key] = [result[key]]
-            result[key].append(dictionary)
-        else:
-            result[key] = dictionary
-    return result
 
 
 def from_excel_to_dataframe(file_name: str) -> DataFrame:
@@ -340,28 +266,6 @@ def excel_to_questions_answers(file_name: str, column_name_questions, column_nam
 
 
 if __name__ == '__main__':
-    # main()
-    # qa = lyrics_to_questions_answers(song_lyrics, next_line=True, next_part=False, duplicate_line=True)
-    # qa.training(ordered=True)
-    # qa_tft = QuestionsAnswers(tft_to_questions_answers(pbe=True))
-    # qa_tft.reverse_dict()
-    # # qa_tft.filter(items_filter=lambda keys, values: "R" in keys)
-    # qa_tft.training(one_to_validate=False, contain_to_validate=False)
-    # qa_tft.training(one_to_validate=False, contain_to_validate=False, keys_to_pickup=3)
-    # qa_tft.exam(reset_if_wrong=True)
-    # qa_tft.exam(reset_if_wrong=False, keys_to_pickup=5)
-    # qa_english = file_to_questions_answers("anglais.txt")
     while True:
         qa = excel_to_questions_answers("english-french-tagalog.xlsx", "English", "French")
         qa.training(normal_and_reverse=True)
-        # qa_english = file_to_questions_answers("anglais.txt")
-        # qa_english.training(keys_to_pickup=3)
-
-    # test_questions_answers = {"Question 1": ["Answer 1"],
-    #                           "Question 2": ["Answer 2", "Answer 3"],
-    #                           "Question 3": ["Answer 4", "Answer 5", "Answer 6"],
-    #                           "Question 4": ["Answer 7"]}
-    # qa = QuestionsAnswers(test_questions_answers)
-    # qa.reverse_dict()
-    # qa.training()
-    # qa.exam()
