@@ -237,9 +237,10 @@ def printc(text: str, color="green", background_color=None, attributes: Iterable
 
 
 
-def from_excel_to_dataframe(file_name: str) -> DataFrame:
+def from_excel_to_dataframe(file_name: str, sheet_name=None) -> DataFrame:
     workbook = load_workbook(file_name)
-    data = workbook.active.values
+    data = workbook.get_sheet_by_name(sheet_name) if sheet_name else workbook.active
+    data = data.values
     headers = next(data)
     return pd.DataFrame(data, columns=headers)
 
@@ -257,8 +258,8 @@ def dataframe_to_questions_answers(dataframe: DataFrame, column_name_questions, 
     return QuestionsAnswers(qa)
 
 
-def excel_to_questions_answers(file_name: str, column_name_questions, column_name_answers) -> QuestionsAnswers:
-    dataframe = from_excel_to_dataframe(file_name)
+def excel_to_questions_answers(file_name: str, column_name_questions, column_name_answers, sheet_name=None) -> QuestionsAnswers:
+    dataframe = from_excel_to_dataframe(file_name, sheet_name)
     return dataframe_to_questions_answers(dataframe, column_name_questions, column_name_answers)
 
 
@@ -267,5 +268,7 @@ def excel_to_questions_answers(file_name: str, column_name_questions, column_nam
 
 if __name__ == '__main__':
     while True:
-        qa = excel_to_questions_answers("english-french-tagalog.xlsx", "English", "French")
+        # qa = excel_to_questions_answers("english-french-tagalog.xlsx", "English", "French", sheet_name="Train")
+        # qa = excel_to_questions_answers("english-french-tagalog.xlsx", "French", "Tagalog", sheet_name="Train")
+        qa = excel_to_questions_answers("english-french-tagalog.xlsx", "English", "Tagalog", sheet_name="Train")
         qa.training(normal_and_reverse=True)
